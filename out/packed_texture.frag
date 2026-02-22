@@ -20,8 +20,8 @@ uniform sampler1D packed_texture_bounding_boxes;
 // uniform vec4 packed_texture_bounding_boxes[MAX_NUM_TEXTURES];
 
 
-// Access bounding box using the texture
 vec4 get_bounding_box(int index) {
+    // this is the definition of how bounding boxes are stored in textures, as vector4s
     return texture( packed_texture_bounding_boxes, float(index) / float(MAX_NUM_TEXTURES));
 }
 
@@ -33,21 +33,19 @@ vec4 get_bounding_box(int index) {
  * @return        The wrapped texture coordinate (vec2).
  */
 vec2 wrap_texture_coordinate(vec2 tc, vec4 bbox) {
-    // Extract bounding box components
-    float tlx = bbox.x;      // Top-left x
-    float tly = bbox.y;      // Top-left y
-    float width = bbox.z;    // Width of the bounding box
-    float height = bbox.w;   // Height of the bounding box
+    float tlx = bbox.x;      // top-left x
+    float tly = bbox.y;      // top-left y
+    float width = bbox.z;    
+    float height = bbox.w;   
 
-    // Calculate deltas from the top-left corner
+    // calculate deltas from the top-left corner
     float dx = tc.x - tlx;
     float dy = tc.y - tly;
 
-    // Wrap the coordinates using modulo and shift back into the bounding box
+    // wrap the coordinates using modulo and shift back into the bounding box
     float wrapped_x = mod(dx, width) + tlx;
     float wrapped_y = mod(dy, height) + tly;
 
-    // Return the wrapped texture coordinate
     return vec2(wrapped_x, wrapped_y);
 }
 

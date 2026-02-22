@@ -1,7 +1,7 @@
 #version 330 core
 
 #include "local_to_world_1024_ubo.glsl"
-#include "texture_packer_input_passthrough.glsl"
+#include "packed_texture_input_passthrough.glsl"
 
 in vec3 position;
 
