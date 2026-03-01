@@ -1,5 +1,6 @@
 #version 330 core
 
+#include "packed_texture_input.glsl";
 #include "packed_texture_sampling.glsl"
 
 out vec4 frag_color;

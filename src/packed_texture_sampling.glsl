@@ -1,8 +1,6 @@
-in vec2 texture_coordinate;
-flat in int packed_texture_index;
-flat in int packed_texture_bounding_box_index;
 
 uniform sampler2DArray packed_textures;
+
 // the next lines are really bad and cause stuff to break 
 // because running out of uniform space, instead 
 // use a texture thing: https://stackoverflow.com/questions/51781227/estimate-number-of-registers-required-in-glsl-shader
@@ -22,12 +20,12 @@ vec4 get_bounding_box(int index) {
     return texture( packed_texture_bounding_boxes, float(index) / float(MAX_NUM_TEXTURES));
 }
 
-/**
- * Wraps a texture coordinate (tc) to stay within the given bounding box.
- *
- * @param tc      The texture coordinate to wrap (vec2).
- * @param bbox    The bounding box as vec4 (top_left_x, top_left_y, width, height).
- * @return        The wrapped texture coordinate (vec2).
+/*
+
+Wraps a texture coordinate (tc) to stay within the given bounding box. 
+
+We assume that the tc is in the packed texture space (not local uvs)
+
  */
 vec2 wrap_texture_coordinate(vec2 tc, vec4 bbox) {
     float tlx = bbox.x;      // top-left x

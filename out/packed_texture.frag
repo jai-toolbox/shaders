@@ -1,9 +1,11 @@
 #version 330 core
 
-// Begin include: packed_texture_sampling.glsl
+// Begin include: packed_texture_input.glsl
 in vec2 texture_coordinate;
 flat in int packed_texture_index;
 flat in int packed_texture_bounding_box_index;
+// End include: packed_texture_input.glsl
+// Begin include: packed_texture_sampling.glsl
 
 uniform sampler2DArray packed_textures;
 // the next lines are really bad and cause stuff to break 

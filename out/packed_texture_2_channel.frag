@@ -1,3 +1,15 @@
+#version 330 core
+
+// Begin include: packed_texture_2_channel_input.glsl
+in vec2 texture_coordinate_0;
+flat in int packed_texture_index_0;
+flat in int packed_texture_bounding_box_index_0;
+
+in vec2 texture_coordinate_1;
+flat in int packed_texture_index_1;
+flat in int packed_texture_bounding_box_index_1;
+// End include: packed_texture_2_channel_input.glsl
+// Begin include: packed_texture_sampling.glsl
 
 uniform sampler2DArray packed_textures;
 // the next lines are really bad and cause stuff to break 
@@ -61,4 +73,25 @@ vec4 sample_packed_texture(
 ) {
     vec4 bbox = get_bounding_box(bounding_box_index);
     return texture(texture_array, vec3(wrap_texture_coordinate(tex_coord, bbox), texture_index));
+}
+// End include: packed_texture_sampling.glsl
+
+out vec4 frag_color;
+
+void main() {
+    vec4 channel_0_color = sample_packed_texture(
+        packed_textures, 
+        texture_coordinate_0, 
+        packed_texture_index_0, 
+        packed_texture_bounding_box_index_0
+    );
+
+    vec4 channel_1_color = sample_packed_texture(
+        packed_textures, 
+        texture_coordinate_1, 
+        packed_texture_index_1, 
+        packed_texture_bounding_box_index_1
+    );
+
+    frag_color = vec4(channel_0_color.rgb * channel_1_color.rgb, 1);
 }
