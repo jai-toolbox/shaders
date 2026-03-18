@@ -13,11 +13,14 @@ uniform mat4 world_to_camera = mat4(1.0);
 uniform float grid_size = 100.0;  // note that this is also in the fragment shader
 uniform vec3 camera_position;
 
-const vec3 square_positions[4] = vec3[4](
-    vec3(-1.0, 0.0, -1.0),      // bottom left
-    vec3( 1.0, 0.0, -1.0),      // bottom right
-    vec3( 1.0, 0.0,  1.0),      // top right
-    vec3(-1.0, 0.0,  1.0)       // top left
+// 0 = XZ (horizontal, Y=0), 1 = XY (vertical, Z=0), 2 = YZ (vertical, X=0)
+uniform int grid_plane = 0;
+
+const vec2 square_positions[4] = vec2[4](
+    vec2(-1.0, -1.0),      // bottom left
+    vec2( 1.0, -1.0),      // bottom right
+    vec2( 1.0,  1.0),      // top right
+    vec2(-1.0,  1.0)       // top left
 );
 
 const int square_indices[6] = int[6](0, 2, 1, 2, 0, 3);
@@ -28,15 +31,35 @@ void main() {
     // the desired world-space area.
 
     int index = square_indices[gl_VertexID];
-    vec3 grid_position = square_positions[index] * grid_size;
+    vec2 pos2d = square_positions[index] * grid_size;
 
-    // move the grid to the camera's XZ position so the grid
-    // always surrounds the viewer. The Y stays at 0 (ground plane).
-    // This is what makes the grid appear "infinite" — it follows
-    // the camera so you never see its edges.
+    // Expand the 2D quad into 3D based on the chosen plane.
+    // The two active axes get the quad coordinates; the flat axis
+    // stays at 0.
 
-    grid_position.x += camera_position.x;
-    grid_position.z += camera_position.z;
+    // move the grid to the camera's position along the active axes
+    // so the grid always surrounds the viewer. The flat axis stays
+    // at 0. This is what makes the grid appear "infinite" — it
+    // follows the camera so you never see its edges.
+
+    vec3 grid_position;
+
+    if (grid_plane == 0) {
+        // XZ plane (Y = 0) — the original behavior
+        grid_position = vec3(pos2d.x + camera_position.x,
+                             0.0,
+                             pos2d.y + camera_position.z);
+    } else if (grid_plane == 1) {
+        // XY plane (Z = 0)
+        grid_position = vec3(pos2d.x + camera_position.x,
+                             pos2d.y + camera_position.y,
+                             0.0);
+    } else {
+        // YZ plane (X = 0)
+        grid_position = vec3(0.0,
+                             pos2d.x + camera_position.y,
+                             pos2d.y + camera_position.z);
+    }
 
     // we pass the world position to the fragment shader so it can
     // compute grid lines based on world-space coordinates.

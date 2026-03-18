@@ -15,6 +15,10 @@ uniform float grid_cell_size = 0.05;
 uniform vec4 grid_color_thick = vec4(0.5, 0.5, 0.5, 1.0);
 uniform vec4 grid_color_thin = vec4(0.0, 0.0, 0.0, 1.0);
 
+// 0 = XZ (horizontal, Y=0), 1 = XY (vertical, Z=0), 2 = YZ (vertical, X=0)
+// Must match the vertex shader
+uniform int grid_plane = 0;
+
 float log10(float x) {
     return log(x) / log(10.0);
 }
@@ -34,18 +38,56 @@ float max_component(vec2 v) {
 
 void main() {
 
+    // Compute screen-space derivatives of the world position BEFORE
+    // any branching. dFdx/dFdy must be called on values that aren't
+    // selected through dynamic branches, otherwise some drivers
+    // return zero for one or more components.
+
+    vec3 ddx = dFdx(grid_world_position);
+    vec3 ddy = dFdy(grid_world_position);
+
+    // Select the two world-space coordinates that lie in the grid plane,
+    // and the corresponding camera coordinates for the distance falloff.
+    // Also pick the matching derivative components.
+
+    vec2 grid_uv;
+    vec2 camera_uv;
+    vec2 ddx_uv;
+    vec2 ddy_uv;
+
+    if (grid_plane == 0) {
+        // XZ plane
+        grid_uv = grid_world_position.xz;
+        camera_uv = camera_position.xz;
+        ddx_uv = ddx.xz;
+        ddy_uv = ddy.xz;
+    } else if (grid_plane == 1) {
+        // XY plane
+        grid_uv = grid_world_position.xy;
+        camera_uv = camera_position.xy;
+        ddx_uv = ddx.xy;
+        ddy_uv = ddy.xy;
+    } else {
+        // YZ plane
+        grid_uv = grid_world_position.yz;
+        camera_uv = camera_position.yz;
+        ddx_uv = ddx.yz;
+        ddy_uv = ddy.yz;
+    }
+
     // Compute screen-space derivatives of the world position.
     // This tells us how much the world position changes per pixel
     // in screen space essentially the "size" of one pixel in
-    // world units. We only care about the XZ plane (the grid plane).
+    // world units. We only care about the two axes that form the
+    // grid plane.
 
-    vec2 dv_x = vec2(dFdx(grid_world_position.x), dFdy(grid_world_position.x));
-    vec2 dv_z = vec2(dFdx(grid_world_position.z), dFdy(grid_world_position.z));
+    vec2 dv_u = vec2(ddx_uv.x, ddy_uv.x);
+    vec2 dv_v = vec2(ddx_uv.y, ddy_uv.y);
 
-    float len_x = length(dv_x);
-    float len_z = length(dv_z);
+    float len_u = length(dv_u);
+    float len_v = length(dv_v);
 
-    vec2 du_dv = vec2(len_x, len_z);
+    vec2 du_dv = vec2(len_u, len_v);
 
     // Determine the Level of Detail (LOD).
     // As the camera moves further away, each pixel covers more world
@@ -72,13 +114,13 @@ void main() {
 
     du_dv *= 4.0;
 
-    vec2 mod_div_dudv = mod(grid_world_position.xz, cell_size_lod0) / du_dv;
+    vec2 mod_div_dudv = mod(grid_uv, cell_size_lod0) / du_dv;
     float lod_0_alpha = max_component(vec2(1.0) - abs(saturate(mod_div_dudv) * 2.0 - vec2(1.0)));
 
-    mod_div_dudv = mod(grid_world_position.xz, cell_size_lod1) / du_dv;
+    mod_div_dudv = mod(grid_uv, cell_size_lod1) / du_dv;
     float lod_1_alpha = max_component(vec2(1.0) - abs(saturate(mod_div_dudv) * 2.0 - vec2(1.0)));
 
-    mod_div_dudv = mod(grid_world_position.xz, cell_size_lod2) / du_dv;
+    mod_div_dudv = mod(grid_uv, cell_size_lod2) / du_dv;
     float lod_2_alpha = max_component(vec2(1.0) - abs(saturate(mod_div_dudv) * 2.0 - vec2(1.0)));
 
     // Blend between LOD levels.
@@ -108,7 +150,7 @@ void main() {
     // The grid fades to transparent at the edges (grid_size radius)
     // to avoid a harsh cutoff at the boundary of the grid plane.
 
-    float opacity_falloff = 1.0 - saturate(length(grid_world_position.xz - camera_position.xz) / grid_size);
+    float opacity_falloff = 1.0 - saturate(length(grid_uv - camera_uv) / grid_size);
 
     color.a *= opacity_falloff;
 
